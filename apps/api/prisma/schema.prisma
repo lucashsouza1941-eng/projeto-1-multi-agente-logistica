@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EmailCategory {
+  URGENT
+  ROUTINE
+  SPAM
+  ACTION_REQUIRED
+}
+
+enum EmailPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum EmailStatus {
+  PENDING
+  TRIAGED
+  ESCALATED
+  RESOLVED
+}
+
+enum AgentType {
+  TRIAGE
+  REPORT
+  ESCALATION
+}
+
+enum AgentStatus {
+  ONLINE
+  OFFLINE
+  PROCESSING
+}
+
+enum ReportStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  ERROR
+}
+
+enum EscalationTicketStatus {
+  NEW
+  ANALYZING
+  ESCALATED
+  RESOLVED
+}
+
+model Email {
+  id               String          @id @default(cuid())
+  from             String
+  to               String?
+  subject          String
+  body             String          @db.Text
+  rawHeaders       Json?
+  category         EmailCategory
+  priority         EmailPriority
+  confidence       Float
+  status           EmailStatus     @default(PENDING)
+  processedAt      DateTime?
+  agentDecision    Json?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  escalationTicket EscalationTicket?
+}
+
+model Agent {
+  id             String       @id @default(cuid())
+  name           String
+  type           AgentType
+  status         AgentStatus  @default(OFFLINE)
+  config         Json?
+  lastRunAt      DateTime?
+  totalProcessed Int          @default(0)
+  successRate    Float        @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  logs           AgentLog[]
+  reports        Report[]
+}
+
+model Report {
+  id          String       @id @default(cuid())
+  title       String
+  type        String
+  content     Json?
+  status      ReportStatus @default(PENDING)
+  parameters  Json?
+  period      String?
+  agentId     String?
+  agent       Agent?       @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model EscalationTicket {
+  id             String                 @id @default(cuid())
+  subject        String
+  description    String                 @db.Text
+  priority       String
+  status         EscalationTicketStatus @default(NEW)
+  assignee       String?
+  source         String?
+  emailId        String?                @unique
+  email          Email?                 @relation(fields: [emailId], references: [id], onDelete: SetNull)
+  aiDecisionLog  Json[]
+  timeline       Json[]
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+}
+
+model AgentLog {
+  id         String   @id @default(cuid())
+  agentId    String
+  agent      Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  action     String
+  input      Json?
+  output     Json?
+  durationMs Int?
+  success    Boolean
+  error      String?  @db.Text
+  createdAt  DateTime @default(now())
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  category  String?
+  updatedAt DateTime @updatedAt
+}
