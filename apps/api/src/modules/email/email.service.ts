@@ -1,10 +1,16 @@
+import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { EmailCategory, EmailPriority, EmailStatus } from '@prisma/client';
+import { Queue } from 'bullmq';
+import { PROCESS_EMAIL_JOB } from '../../queues/queue-jobs.constants';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class EmailService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @InjectQueue('email-triage') private readonly emailTriageQueue: Queue,
+  ) {}
 
   private actionLabel(status: EmailStatus): string {
     const map: Partial<Record<EmailStatus, string>> = {
@@ -74,6 +80,20 @@ export class EmailService {
     const email = await this.prisma.email.findUnique({ where: { id } });
     if (!email) throw new NotFoundException('Email not found');
     return this.toDto(email);
+  }
+
+  async enqueueProcess(id: string) {
+    const exists = await this.prisma.email.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!exists) throw new NotFoundException('Email not found');
+    const job = await this.emailTriageQueue.add(
+      PROCESS_EMAIL_JOB,
+      { emailId: id },
+      { attempts: 3, removeOnComplete: 50, backoff: { type: 'exponential', delay: 2000 } },
+    );
+    return { queued: true, jobId: String(job.id) };
   }
 
   async reclassify(id: string, body: { category: EmailCategory; priority: EmailPriority }) {

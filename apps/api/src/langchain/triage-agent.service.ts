@@ -8,12 +8,15 @@ export interface TriageEmailInput {
   from: string;
 }
 
+export type TriageSentiment = 'positive' | 'neutral' | 'negative';
+
 export interface TriageResult {
   category: EmailCategory;
   priority: EmailPriority;
   confidence: number;
   reasoning: string;
   suggestedActions: string[];
+  sentiment: TriageSentiment;
 }
 
 @Injectable()
@@ -25,6 +28,16 @@ export class TriageAgentService {
   constructor(private readonly config: ConfigService) {
     const key = this.config.get<string>('OPENAI_API_KEY');
     this.status = key ? 'ONLINE' : 'OFFLINE';
+  }
+
+  private inferSentiment(text: string): TriageSentiment {
+    const neg =
+      /reclama|problema|atraso|insatisfeito|urgente|péssimo|cancelar|devolução|danif|erro/i.test(text);
+    const pos =
+      /obrigad|parabéns|excelente|perfeito|ótimo|satisf|agradec/i.test(text);
+    if (neg) return 'negative';
+    if (pos) return 'positive';
+    return 'neutral';
   }
 
   async process(email: TriageEmailInput): Promise<TriageResult> {
@@ -49,6 +62,7 @@ export class TriageAgentService {
     }
     const confidence = isUrgent ? 94 : isSpam ? 99 : 87;
     const hasKey = !!this.config.get<string>('OPENAI_API_KEY');
+    const sentiment = this.inferSentiment(lower);
     this.status = 'ONLINE';
     return {
       category,
@@ -61,6 +75,7 @@ export class TriageAgentService {
           : category === EmailCategory.SPAM
             ? ['Mover para spam']
             : ['Arquivar'],
+      sentiment,
     };
   }
 

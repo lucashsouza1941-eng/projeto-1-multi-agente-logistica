@@ -1,11 +1,15 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { EmailTriageProcessor } from './email-triage.processor';
+import { AgentsModule } from '../modules/agents/agents.module';
+import { PrismaModule } from '../prisma/prisma.module';
+import { EmailTriageProcessor } from '../email-triage/email-triage.processor';
 import { ReportGenerationProcessor } from './report-generation.processor';
 
 @Module({
   imports: [
+    PrismaModule,
+    AgentsModule,
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
@@ -15,7 +19,10 @@ import { ReportGenerationProcessor } from './report-generation.processor';
       }),
       inject: [ConfigService],
     }),
-    BullModule.registerQueue({ name: 'email-triage' }, { name: 'report-generation' }),
+    BullModule.registerQueue(
+      { name: 'email-triage' },
+      { name: 'report-generation' },
+    ),
   ],
   providers: [EmailTriageProcessor, ReportGenerationProcessor],
   exports: [BullModule],

@@ -40,6 +40,19 @@ export class EmailController {
     return this.emailService.bulkAction(body.ids, body.action);
   }
 
+  @Post(':id/process')
+  @ApiOperation({
+    summary: 'Enfileirar processamento de triagem (demo)',
+    description:
+      'Adiciona um job BullMQ `process-email` na fila email-triage para o e-mail indicado.',
+  })
+  @ApiParam({ name: 'id' })
+  @ApiResponse({ status: 201, description: 'Job enfileirado' })
+  @ApiResponse({ status: 404, description: 'Não encontrado' })
+  enqueueProcess(@Param('id') id: string) {
+    return this.emailService.enqueueProcess(id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obter e-mail por id' })
   @ApiParam({ name: 'id' })

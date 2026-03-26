@@ -25,6 +25,7 @@ enum EmailStatus {
   TRIAGED
   ESCALATED
   RESOLVED
+  FAILED
 }
 
 enum AgentType {
