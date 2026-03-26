@@ -58,7 +58,7 @@ export class DashboardService {
       this.prisma.email.count({ where: { createdAt: { gte: weekStart } } }),
       this.prisma.email.count({ where: { createdAt: { gte: monthStart } } }),
       this.prisma.report.count({
-        where: { status: 'COMPLETED', createdAt: { gte: since } } },
+        where: { status: 'COMPLETED', createdAt: { gte: since } },
       }),
       this.prisma.email.aggregate({
         where: { status: 'TRIAGED' },

@@ -4,6 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:api": "pnpm --dir apps/api run start:dev",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "api:generate": "pnpm --dir apps/api exec prisma generate",
+    "api:migrate": "pnpm --dir apps/api exec prisma migrate deploy",
     "build": "next build",
     "start": "next start",
     "lint": "eslint ."

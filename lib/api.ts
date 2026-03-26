@@ -1,15 +1,55 @@
-const base = () =>
+import { getToken } from './auth';
+
+const directBase = () =>
   (process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://localhost:3001');
 
+const connectionHint =
+  'Verifique se a API está rodando (pnpm dev:api na porta 3001), se o Docker está no ar (pnpm docker:up) e se o banco foi migrado (pnpm api:migrate).';
+
+function requestUrl(pathWithQuery: string): string {
+  if (typeof window !== 'undefined') {
+    return `/api/backend${pathWithQuery}`;
+  }
+  return `${directBase()}${pathWithQuery}`;
+}
+
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${base()}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-    cache: 'no-store',
-  });
+  const url = requestUrl(path);
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+  const token = await getToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...init,
+      headers,
+      cache: 'no-store',
+      credentials: typeof window !== 'undefined' ? 'include' : undefined,
+    });
+  } catch (e) {
+    const isNetwork =
+      e instanceof TypeError ||
+      (e instanceof Error && e.message === 'Failed to fetch');
+    if (isNetwork) {
+      throw new Error(`Sem conexão com a API (${directBase()}). ${connectionHint}`);
+    }
+    throw e;
+  }
+
+  if (res.status === 401) {
+    if (typeof window !== 'undefined') {
+      window.location.assign('/login');
+    }
+    const text = await res.text();
+    throw new Error(text || 'Unauthorized');
+  }
+
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || `HTTP ${res.status}`);

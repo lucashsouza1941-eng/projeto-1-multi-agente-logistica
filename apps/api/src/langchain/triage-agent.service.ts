@@ -74,6 +74,6 @@ export class TriageAgentService {
   }
 
   configure(config: { confidenceThreshold?: number }) {
-    if (config.confidenceThreshold != null) this._confidenceThreshold = config.confidenceThreshold;
+    if (config.confidenceThreshold != null) this.confidenceThreshold = config.confidenceThreshold;
   }
 }
