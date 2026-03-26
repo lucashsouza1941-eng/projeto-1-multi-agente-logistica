@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { AgentsController } from './agents.controller';
 import { AgentsService } from './agents.service';
 import { AgentRegistryService } from './agent-registry.service';
-import { TriageAgentService } from '../../langchain/triage-agent.service';
-import { ReportAgentService } from '../../langchain/report-agent.service';
+import { TriageAgentService } from '../../agents/triage-agent.service';
+import { ReportAgentService } from '../../agents/report-agent.service';
 import { EscalationAgentService } from '../../langchain/escalation-agent.service';
 
 @Module({

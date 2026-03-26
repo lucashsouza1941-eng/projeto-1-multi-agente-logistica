@@ -1,5 +1,5 @@
 import { Processor, WorkerHost, InjectQueue } from '@nestjs/bullmq';
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Job, Queue, QueueEvents } from 'bullmq';
 import {
@@ -13,7 +13,7 @@ import {
   PROCESS_EMAIL_JOB,
   ProcessEmailPayload,
 } from '../queues/queue-jobs.constants';
-import { TriageAgentService } from '../langchain/triage-agent.service';
+import { TriageAgentService } from '../agents/triage-agent.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Processor('email-triage')
@@ -105,6 +105,7 @@ export class EmailTriageProcessor extends WorkerHost implements OnModuleDestroy 
 
       const agentDecisionCore = {
         reasoning: triage.reasoning,
+        summary: triage.summary,
         suggestedActions: triage.suggestedActions,
         sentiment: triage.sentiment,
         category: triage.category,

@@ -2,7 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { AgentType, Prisma, ReportStatus } from '@prisma/client';
-import { ReportAgentService } from '../langchain/report-agent.service';
+import { ReportAgentService } from '../agents/report-agent.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { GENERATE_REPORT_FROM_EMAIL_JOB } from './queue-jobs.constants';
 
@@ -55,7 +55,11 @@ export class ReportGenerationProcessor extends WorkerHost {
 
       const type = job.data.type ?? 'pos-triagem';
       const period = job.data.period ?? '24h';
-      const result = await this.reportAgent.generate({ type, period });
+      const result = await this.reportAgent.generateFromEmail({
+        email,
+        type,
+        period,
+      });
 
       const report = await this.prisma.report.create({
         data: {
@@ -68,6 +72,7 @@ export class ReportGenerationProcessor extends WorkerHost {
           parameters: {
             sourceEmailId: emailId,
             jobId: String(job.id),
+            reportType: type,
           } as Prisma.InputJsonValue,
         },
       });
