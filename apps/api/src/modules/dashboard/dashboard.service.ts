@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class DashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   private startOfDayUtc(): Date {
     const d = new Date();
@@ -52,6 +52,8 @@ export class DashboardService {
       triageAgg,
       avgLog,
       ticketsEscalated,
+      agentsOnline,
+      emailsPending,
     ] = await Promise.all([
       this.prisma.email.count({ where: { createdAt: { gte: since } } }),
       this.prisma.email.count({ where: { createdAt: { gte: today } } }),
@@ -71,6 +73,10 @@ export class DashboardService {
       this.prisma.escalationTicket.count({
         where: { status: { in: ['NEW', 'ANALYZING', 'ESCALATED'] } },
       }),
+      this.prisma.agent.count({
+        where: { status: { in: ['ONLINE', 'PROCESSING'] } },
+      }),
+      this.prisma.email.count({ where: { status: 'PENDING' } }),
     ]);
 
     const triageAccuracyPercent =
@@ -88,6 +94,8 @@ export class DashboardService {
       triageAccuracyPercent,
       reportsGenerated: reportsInPeriod,
       ticketsEscalated,
+      agentsOnline,
+      emailsPending,
       avgProcessingTimeMs,
       period: period || '7d',
     };

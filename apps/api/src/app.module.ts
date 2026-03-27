@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { LoggerModule } from 'nestjs-pino';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
@@ -14,8 +15,24 @@ import { HealthModule } from './modules/health/health.module';
 import { QueuesModule } from './queues/queues.module';
 import appConfig from './config/app.config';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 @Module({
   imports: [
+    LoggerModule.forRoot({
+      pinoHttp: {
+        level: process.env.LOG_LEVEL ?? 'info',
+        transport: isProduction
+          ? undefined
+          : {
+              target: 'pino-pretty',
+              options: {
+                singleLine: true,
+                colorize: true,
+              },
+            },
+      },
+    }),
     ConfigModule.forRoot({ isGlobal: true, load: [appConfig] }),
     PrismaModule,
     HealthModule,

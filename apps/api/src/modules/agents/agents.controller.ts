@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Patch, Post, Query } from '@nestjs/common';
 import {
   ApiBody,
   ApiOperation,
@@ -7,19 +7,31 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { AgentRegistryService } from './agent-registry.service';
 import { AgentsService } from './agents.service';
 import { UpdateAgentConfigDto } from './dto/update-agent-config.dto';
 
 @ApiTags('agents')
 @Controller('agents')
 export class AgentsController {
-  constructor(private readonly agentsService: AgentsService) {}
+  constructor(
+    @Inject(AgentsService) private readonly agentsService: AgentsService,
+    @Inject(AgentRegistryService)
+    private readonly agentRegistry: AgentRegistryService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Listar agentes' })
   @ApiResponse({ status: 200, description: 'Lista' })
   list() {
     return this.agentsService.list();
+  }
+
+  @Get('registry')
+  @ApiOperation({ summary: 'Registry em memória (Triage, Report, …)' })
+  @ApiResponse({ status: 200, description: 'Metadados registrados' })
+  getRegistry() {
+    return this.agentRegistry.getAll();
   }
 
   @Get(':id/logs')

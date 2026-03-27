@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Patch, Post, Query } from '@nestjs/common';
 import {
   ApiBody,
   ApiOperation,
@@ -14,7 +14,7 @@ import { BulkEmailActionDto } from './dto/bulk-email-action.dto';
 @ApiTags('emails')
 @Controller('emails')
 export class EmailController {
-  constructor(private readonly emailService: EmailService) {}
+  constructor(@Inject(EmailService) private readonly emailService: EmailService) {}
 
   @Get()
   @ApiOperation({ summary: 'Listar e-mails' })

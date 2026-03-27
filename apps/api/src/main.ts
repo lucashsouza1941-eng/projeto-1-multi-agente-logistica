@@ -1,11 +1,20 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import {
+  GlobalExceptionFilter,
+  CorrelationIdInterceptor,
+} from './common';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  app.useLogger(app.get(Logger));
+
+  app.useGlobalInterceptors(new CorrelationIdInterceptor());
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   app.use(helmet());
   app.useGlobalPipes(
@@ -31,6 +40,7 @@ async function bootstrap() {
   app.enableCors({
     origin: [...new Set(corsOrigins)],
     credentials: true,
+    exposedHeaders: ['X-Correlation-ID'],
   });
 
   const config = new DocumentBuilder()
@@ -44,7 +54,7 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3001;
   await app.listen(port);
-  console.log(`LogiAgent API running on http://localhost:${port}`);
+  app.get(Logger).log(`LogiAgent API running on http://localhost:${port}`);
 }
 
 bootstrap();

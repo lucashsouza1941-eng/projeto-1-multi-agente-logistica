@@ -1,11 +1,13 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Inject, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 
 @ApiTags('dashboard')
 @Controller('dashboard')
 export class DashboardController {
-  constructor(private readonly dashboard: DashboardService) {}
+  constructor(
+    @Inject(DashboardService) private readonly dashboard: DashboardService,
+  ) {}
 
   @Get('kpis')
   @ApiOperation({ summary: 'KPIs do dashboard' })

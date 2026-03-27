@@ -1,5 +1,5 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { EmailCategory, EmailPriority, EmailStatus } from '@prisma/client';
 import { Queue } from 'bullmq';
 import { PROCESS_EMAIL_JOB } from '../../queues/queue-jobs.constants';
@@ -8,7 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 @Injectable()
 export class EmailService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
     @InjectQueue('email-triage') private readonly emailTriageQueue: Queue,
   ) {}
 
