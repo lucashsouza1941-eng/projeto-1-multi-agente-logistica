@@ -67,6 +67,10 @@ export interface DashboardKpis {
   triageAccuracyPercent: number;
   reportsGenerated: number;
   ticketsEscalated: number;
+  /** Agentes com status ONLINE ou PROCESSING */
+  agentsOnline: number;
+  /** E-mails aguardando triagem */
+  emailsPending: number;
   avgProcessingTimeMs: number;
   period: string;
 }

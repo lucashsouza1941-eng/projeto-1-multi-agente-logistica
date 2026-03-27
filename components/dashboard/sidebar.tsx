@@ -1,41 +1,83 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { 
-  LayoutDashboard, 
-  Mail, 
-  FileText, 
-  AlertTriangle, 
-  Bot, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Mail,
+  FileText,
+  AlertTriangle,
+  Bot,
+  Settings,
   BarChart3,
   ChevronLeft,
   Boxes,
   Workflow,
-  History
+  History,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useSidebarStats } from "@/hooks/use-sidebar-stats"
 
 interface SidebarProps {
   open: boolean
   onToggle: () => void
 }
 
-const navigation = [
+type SidebarStatKey = "agents" | "emails" | "escalations"
+
+const navigation: Array<{
+  name: string
+  icon: typeof LayoutDashboard
+  href: string
+  stat?: SidebarStatKey
+}> = [
   { name: "Dashboard", icon: LayoutDashboard, href: "/" },
-  { name: "Agentes", icon: Bot, href: "/agents", badge: "3 ativos" },
-  { name: "Triagem de E-mails", icon: Mail, href: "/email-triage", badge: "24" },
+  { name: "Agentes", icon: Bot, href: "/agents", stat: "agents" },
+  { name: "Triagem de E-mails", icon: Mail, href: "/email-triage", stat: "emails" },
   { name: "Relatórios", icon: FileText, href: "/reports" },
-  { name: "Escalonamentos", icon: AlertTriangle, href: "/escalations", badge: "5" },
+  { name: "Escalonamentos", icon: AlertTriangle, href: "/escalations", stat: "escalations" },
   { name: "Workflows", icon: Workflow, href: "/workflows" },
   { name: "Analytics", icon: BarChart3, href: "/analytics" },
   { name: "Log de Atividade", icon: History, href: "/activity" },
 ]
+
+function SidebarStatBadgeContent({
+  statKey,
+  isLoading,
+  isError,
+  activeAgents,
+  pendingEmails,
+  openEscalationTickets,
+}: {
+  statKey: SidebarStatKey
+  isLoading: boolean
+  isError: boolean
+  activeAgents: number | null
+  pendingEmails: number | null
+  openEscalationTickets: number | null
+}) {
+  if (isLoading) {
+    return <Skeleton className="h-5 min-w-[2.5rem] rounded-md" />
+  }
+
+  const dash = "–"
+
+  if (statKey === "agents") {
+    if (isError || activeAgents === null) return dash
+    return `${activeAgents} ${activeAgents === 1 ? "ativo" : "ativos"}`
+  }
+  if (statKey === "emails") {
+    if (isError || pendingEmails === null) return dash
+    return String(pendingEmails)
+  }
+  if (isError || openEscalationTickets === null) return dash
+  return String(openEscalationTickets)
+}
 
 const settings = [
   { name: "Configurações", icon: Settings, href: "/settings" },
@@ -43,7 +85,8 @@ const settings = [
 
 function NavContent({ open }: { open: boolean }) {
   const pathname = usePathname()
-  
+  const sidebarStats = useSidebarStats()
+
   return (
     <>
       <nav className="space-y-1">
@@ -64,12 +107,19 @@ function NavContent({ open }: { open: boolean }) {
               {open && (
                 <>
                   <span className="flex-1">{item.name}</span>
-                  {item.badge && (
-                    <Badge 
+                  {item.stat && (
+                    <Badge
                       variant={isActive ? "default" : "secondary"}
-                      className="text-xs"
+                      className="text-xs tabular-nums"
                     >
-                      {item.badge}
+                      <SidebarStatBadgeContent
+                        statKey={item.stat}
+                        isLoading={sidebarStats.isLoading}
+                        isError={sidebarStats.isError}
+                        activeAgents={sidebarStats.activeAgents}
+                        pendingEmails={sidebarStats.pendingEmails}
+                        openEscalationTickets={sidebarStats.openEscalationTickets}
+                      />
                     </Badge>
                   )}
                 </>

@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.gitignore
+*.md
+.env
+.env.*
+!.env.docker.example
+apps/api
+.cursor
+coverage
+dist
+**/.DS_Store
+**/npm-debug.log*
+**/pnpm-debug.log*

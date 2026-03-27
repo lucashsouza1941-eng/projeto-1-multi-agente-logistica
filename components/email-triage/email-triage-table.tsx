@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import {
   Table,
   TableBody,
@@ -46,6 +46,28 @@ const priorityConfig = {
   baixa: { label: "Baixa", className: "bg-green-500/10 text-green-400" },
 }
 
+function SortableHeader({
+  field,
+  children,
+  onSort,
+}: {
+  field: SortField
+  children: ReactNode
+  onSort: (field: SortField) => void
+}) {
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="-ml-3 h-8 data-[state=open]:bg-accent"
+      onClick={() => onSort(field)}
+    >
+      {children}
+      <ArrowUpDown className="ml-2 h-4 w-4" />
+    </Button>
+  )
+}
+
 export function EmailTriageTable({
   emails,
   selectedEmails,
@@ -76,9 +98,10 @@ export function EmailTriageTable({
         return direction * a.subject.localeCompare(b.subject)
       case "category":
         return direction * a.category.localeCompare(b.category)
-      case "priority":
+      case "priority": {
         const priorityOrder = { alta: 3, media: 2, baixa: 1 }
         return direction * (priorityOrder[a.priority] - priorityOrder[b.priority])
+      }
       case "confidence":
         return direction * (a.confidence - b.confidence)
       case "date":
@@ -110,18 +133,6 @@ export function EmailTriageTable({
     }
   }
 
-  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="-ml-3 h-8 data-[state=open]:bg-accent"
-      onClick={() => handleSort(field)}
-    >
-      {children}
-      <ArrowUpDown className="ml-2 h-4 w-4" />
-    </Button>
-  )
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return new Intl.DateTimeFormat("pt-BR", {
@@ -146,23 +157,33 @@ export function EmailTriageTable({
                 />
               </TableHead>
               <TableHead className="w-[180px]">
-                <SortableHeader field="from">De</SortableHeader>
+                <SortableHeader field="from" onSort={handleSort}>
+                  De
+                </SortableHeader>
               </TableHead>
               <TableHead className="min-w-[250px]">
-                <SortableHeader field="subject">Assunto</SortableHeader>
+                <SortableHeader field="subject" onSort={handleSort}>
+                  Assunto
+                </SortableHeader>
               </TableHead>
               <TableHead className="w-[140px]">
-                <SortableHeader field="category">Categoria</SortableHeader>
+                <SortableHeader field="category" onSort={handleSort}>
+                  Categoria
+                </SortableHeader>
               </TableHead>
               <TableHead className="w-[100px]">
-                <SortableHeader field="priority">Prioridade</SortableHeader>
+                <SortableHeader field="priority" onSort={handleSort}>
+                  Prioridade
+                </SortableHeader>
               </TableHead>
               <TableHead className="w-[120px]">
                 <SortableHeader field="confidence">Confiança IA</SortableHeader>
               </TableHead>
               <TableHead className="w-[180px]">Ação Tomada</TableHead>
               <TableHead className="w-[100px]">
-                <SortableHeader field="date">Data</SortableHeader>
+                <SortableHeader field="date" onSort={handleSort}>
+                  Data
+                </SortableHeader>
               </TableHead>
             </TableRow>
           </TableHeader>

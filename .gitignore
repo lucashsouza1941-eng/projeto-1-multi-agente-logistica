@@ -11,6 +11,7 @@ next.user-config.*
 # Environment variables
 .env.local
 .env*.local
+.env.docker
 
 # API (Nest build output & local secrets)
 apps/api/dist/

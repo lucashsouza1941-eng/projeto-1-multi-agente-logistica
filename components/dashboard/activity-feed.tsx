@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState, useSyncExternalStore } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -54,12 +54,12 @@ function mapApiItem(item: DashboardActivityItem, index: number): Activity {
 
 export function ActivityFeed() {
   const [isLive, setIsLive] = useState(true)
-  const [mounted, setMounted] = useState(false)
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
   const { data, isLoading, isError, error, isFetching } = useDashboardActivity(50, isLive)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   const activities = useMemo(() => (data ?? []).map(mapApiItem), [data])
 

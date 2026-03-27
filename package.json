@@ -7,6 +7,7 @@
     "dev:api": "pnpm --dir apps/api run start:dev",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
+    "docker:env": "node -e \"require('fs').copyFileSync('.env.docker.example','.env.docker')\"",
     "api:generate": "pnpm --dir apps/api exec prisma generate",
     "api:migrate": "pnpm --dir apps/api exec prisma migrate deploy",
     "build": "next build",
@@ -66,6 +67,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.18.0",
     "@tailwindcss/postcss": "^4.2.0",
     "@types/node": "^22",
     "@types/react": "19.2.14",
@@ -73,6 +75,9 @@
     "postcss": "^8.5",
     "tailwindcss": "^4.2.0",
     "tw-animate-css": "1.3.3",
-    "typescript": "5.7.3"
+    "typescript": "5.7.3",
+    "eslint": "^9.18.0",
+    "eslint-config-next": "16.1.6",
+    "typescript-eslint": "^8.21.0"
   }
 }
