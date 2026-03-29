@@ -15,21 +15,24 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 interface HeaderProps {
-  onMenuToggle: () => void
+  onMenuToggle?: () => void
+  breadcrumbs?: BreadcrumbItem[]
 }
 
-interface BreadcrumbItem {
+export interface BreadcrumbItem {
   label: string
   href?: string
-
 }
 
-const breadcrumbs: BreadcrumbItem[] = [
+const defaultBreadcrumbs: BreadcrumbItem[] = [
   { label: "LogiAgent", href: "/" },
   { label: "Dashboard" },
 ]
 
-export function DashboardHeader({ onMenuToggle }: HeaderProps) {
+export function DashboardHeader({
+  onMenuToggle,
+  breadcrumbs = defaultBreadcrumbs,
+}: HeaderProps) {
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm">
       <div className="flex h-full items-center justify-between px-4 lg:px-6">
@@ -54,7 +57,7 @@ export function DashboardHeader({ onMenuToggle }: HeaderProps) {
           
           {/* Breadcrumbs */}
           <nav className="hidden md:flex items-center gap-1 text-sm">
-            {breadcrumbs.map((item, index) => (
+            {breadcrumbs.map((item: BreadcrumbItem, index: number) => (
               <div key={item.label} className="flex items-center">
                 {index > 0 && (
                   <ChevronRight className="h-4 w-4 text-muted-foreground mx-1" />

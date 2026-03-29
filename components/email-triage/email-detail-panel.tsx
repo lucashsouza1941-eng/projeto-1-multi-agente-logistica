@@ -19,7 +19,7 @@ import {
   RefreshCw
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { Email } from "@/app/email-triage/page"
+import type { Email } from "@/lib/types/email-ui"
 
 interface EmailDetailPanelProps {
   email: Email
@@ -39,7 +39,12 @@ const priorityConfig = {
   baixa: { label: "Baixa", className: "bg-green-500/10 text-green-400" },
 }
 
-export function EmailDetailPanel({ email, onClose }: EmailDetailPanelProps) {
+export function EmailDetailPanel({
+  email,
+  onClose,
+  onEnqueueTriage,
+  isEnqueueing,
+}: EmailDetailPanelProps) {
   const formatDate = (dateString: string) => {
     return new Intl.DateTimeFormat("pt-BR", {
       day: "2-digit",
@@ -53,7 +58,7 @@ export function EmailDetailPanel({ email, onClose }: EmailDetailPanelProps) {
   const actionMatches = email.actionTaken === email.suggestedAction
 
   return (
-    <div className="w-[420px] border border-border rounded-lg bg-card flex flex-col h-full">
+    <div className="flex h-full w-full max-w-full flex-col rounded-lg border border-border bg-card lg:max-w-[420px]">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         <h3 className="font-semibold text-foreground">Detalhes do E-mail</h3>
@@ -196,21 +201,30 @@ export function EmailDetailPanel({ email, onClose }: EmailDetailPanelProps) {
       </ScrollArea>
 
       {/* Actions Footer */}
-      <div className="p-4 border-t border-border space-y-3">
+      <div className="space-y-3 border-t border-border p-4">
+        {onEnqueueTriage && (
+          <Button
+            className="w-full gap-2"
+            variant="default"
+            disabled={isEnqueueing}
+            onClick={() => onEnqueueTriage(email.id)}
+          >
+            <RefreshCw
+              className={cn("h-4 w-4", isEnqueueing && "animate-spin")}
+            />
+            {isEnqueueing ? "Enfileirando…" : "Processar com triagem (IA)"}
+          </Button>
+        )}
         <div className="flex items-center gap-2">
-          <Button className="flex-1 gap-2" variant="default">
+          <Button className="flex-1 gap-2" variant="outline" type="button">
             <ThumbsUp className="h-4 w-4" />
             Aprovar
           </Button>
-          <Button className="flex-1 gap-2" variant="outline">
+          <Button className="flex-1 gap-2" variant="outline" type="button">
             <ThumbsDown className="h-4 w-4" />
             Rejeitar
           </Button>
         </div>
-        <Button className="w-full gap-2" variant="secondary">
-          <RefreshCw className="h-4 w-4" />
-          Re-classificar
-        </Button>
       </div>
     </div>
   )

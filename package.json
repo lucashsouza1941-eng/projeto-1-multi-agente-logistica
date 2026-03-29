@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "pnpm --dir apps/api install",
     "dev": "next dev",
     "dev:api": "pnpm --dir apps/api run start:dev",
     "docker:up": "docker compose up -d",
@@ -12,7 +13,8 @@
     "api:migrate": "pnpm --dir apps/api exec prisma migrate deploy",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:coverage": "pnpm --dir apps/api run test:coverage"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.0",

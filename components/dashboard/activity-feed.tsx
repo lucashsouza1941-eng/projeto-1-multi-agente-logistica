@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Mail, FileText, AlertTriangle, Bot, RefreshCw, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useDashboardActivity } from "@/hooks/use-dashboard-activity"
+import { toUserFriendlyError } from "@/lib/user-friendly-error"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { DashboardActivityItem } from "@/lib/api"
@@ -101,9 +102,7 @@ export function ActivityFeed() {
     return (
       <Alert variant="destructive">
         <AlertTitle>Feed de atividade</AlertTitle>
-        <AlertDescription>
-          {error instanceof Error ? error.message : "Erro ao carregar"}
-        </AlertDescription>
+        <AlertDescription>{toUserFriendlyError(error)}</AlertDescription>
       </Alert>
     )
   }
@@ -141,6 +140,14 @@ export function ActivityFeed() {
       </CardHeader>
       <CardContent className="p-0">
         <div className="h-[400px] overflow-y-auto px-4 pb-4">
+          {activities.length === 0 ? (
+            <div className="flex h-full min-h-[200px] flex-col items-center justify-center gap-2 px-4 text-center">
+              <p className="text-sm font-medium text-foreground">Nenhuma atividade ainda</p>
+              <p className="max-w-sm text-xs text-muted-foreground">
+                Quando os agentes processarem e-mails ou gerarem relatórios, os eventos aparecerão aqui.
+              </p>
+            </div>
+          ) : (
           <div className="relative">
             <div className="absolute left-[19px] top-3 bottom-3 w-px bg-border" />
             <div className="space-y-1">
@@ -183,6 +190,7 @@ export function ActivityFeed() {
               })}
             </div>
           </div>
+          )}
         </div>
       </CardContent>
     </Card>

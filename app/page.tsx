@@ -7,31 +7,42 @@ import { MetricsCards } from "@/components/dashboard/metrics-cards"
 import { EmailVolumeChart } from "@/components/dashboard/email-volume-chart"
 import { TriageDistributionChart } from "@/components/dashboard/triage-distribution-chart"
 import { ActivityFeed } from "@/components/dashboard/activity-feed"
+import type { DashboardDateRange } from "@/lib/api"
+import { defaultCustomRange } from "@/lib/dates"
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [period, setPeriod] = useState("today")
+  const [customRange, setCustomRange] = useState<DashboardDateRange | null>(null)
+
+  const handlePeriodChange = (value: string) => {
+    setPeriod(value)
+    if (value === "custom") {
+      setCustomRange((r) => r ?? defaultCustomRange())
+    }
+  }
 
   return (
     <div className="flex min-h-screen bg-background">
       <DashboardSidebar open={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
       
-      <div className="flex-1 flex flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <DashboardHeader onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
         
-        <main className="flex-1 p-6 overflow-auto">
-          <div className="max-w-[1600px] mx-auto space-y-6">
-            {/* KPI Metrics with Period Filter */}
-            <MetricsCards period={period} onPeriodChange={setPeriod} />
+        <main className="flex-1 overflow-auto p-4 sm:p-6">
+          <div className="mx-auto max-w-[1600px] space-y-6">
+            <MetricsCards
+              period={period}
+              onPeriodChange={handlePeriodChange}
+              customRange={customRange}
+              onCustomRangeChange={setCustomRange}
+            />
             
-            {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-              {/* Email Volume - Line Chart (wider) */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
               <div className="lg:col-span-3">
-                <EmailVolumeChart />
+                <EmailVolumeChart period={period} customRange={customRange} />
               </div>
               
-              {/* Triage Distribution - Bar Chart */}
               <div className="lg:col-span-2">
                 <TriageDistributionChart />
               </div>

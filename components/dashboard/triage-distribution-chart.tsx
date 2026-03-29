@@ -15,6 +15,7 @@ import {
   Cell,
 } from "recharts"
 import { useDashboardCategories } from "@/hooks/use-dashboard-categories"
+import { toUserFriendlyError } from "@/lib/user-friendly-error"
 
 const COLORS: Record<string, string> = {
   URGENT: "oklch(0.6 0.2 25)",
@@ -86,9 +87,7 @@ export function TriageDistributionChart() {
     return (
       <Alert variant="destructive">
         <AlertTitle>Distribuição por categoria</AlertTitle>
-        <AlertDescription>
-          {error instanceof Error ? error.message : "Erro ao carregar dados"}
-        </AlertDescription>
+        <AlertDescription>{toUserFriendlyError(error)}</AlertDescription>
       </Alert>
     )
   }

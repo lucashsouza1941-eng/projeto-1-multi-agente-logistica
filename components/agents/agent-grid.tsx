@@ -6,6 +6,7 @@ import { AgentDrawer } from "./agent-drawer"
 import { useAgents } from "@/hooks/use-agents"
 import type { ApiAgent } from "@/lib/api"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { toUserFriendlyError } from "@/lib/user-friendly-error"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent } from "@/components/ui/card"
 
@@ -97,20 +98,20 @@ export function AgentGrid() {
   if (isError) {
     return (
       <Alert variant="destructive">
-        <AlertTitle>Agentes</AlertTitle>
-        <AlertDescription>
-          {error instanceof Error ? error.message : "Erro ao carregar agentes"}
-        </AlertDescription>
+        <AlertTitle>Erro ao carregar agentes</AlertTitle>
+        <AlertDescription>{toUserFriendlyError(error)}</AlertDescription>
       </Alert>
     )
   }
 
   if (agents.length === 0) {
     return (
-      <Alert>
-        <AlertTitle>Nenhum agente</AlertTitle>
-        <AlertDescription>Execute o seed do Prisma para criar agentes.</AlertDescription>
-      </Alert>
+      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 px-6 py-16 text-center">
+        <p className="text-sm font-medium text-foreground">Nenhum agente cadastrado</p>
+        <p className="mt-2 max-w-md text-xs text-muted-foreground sm:text-sm">
+          Rode o seed do Prisma na API para registrar os agentes de triagem, relatório e escalação.
+        </p>
+      </div>
     )
   }
 

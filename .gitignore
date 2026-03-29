@@ -15,6 +15,7 @@ next.user-config.*
 
 # API (Nest build output & local secrets)
 apps/api/dist/
+apps/api/coverage/
 apps/api/.env
 
 # Common ignores

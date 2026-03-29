@@ -65,6 +65,8 @@ describe('Dashboard HTTP (integration)', () => {
       agentsOnline: 1,
       emailsPending: 0,
       period: '7d',
+      startDate: null,
+      endDate: null,
     });
     expect(res.body).toHaveProperty('triageAccuracyPercent');
     expect(res.body).toHaveProperty('avgProcessingTimeMs');

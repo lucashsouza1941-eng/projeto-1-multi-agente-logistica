@@ -37,7 +37,9 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
       e instanceof TypeError ||
       (e instanceof Error && e.message === 'Failed to fetch');
     if (isNetwork) {
-      throw new Error(`Sem conexão com a API (${directBase()}). ${connectionHint}`);
+      throw new Error(
+        `Sem conexão com a API. ${connectionHint}`,
+      );
     }
     throw e;
   }
@@ -73,12 +75,23 @@ export interface DashboardKpis {
   emailsPending: number;
   avgProcessingTimeMs: number;
   period: string;
+  startDate?: string | null;
+  endDate?: string | null;
 }
 
-export function getDashboardKpis(period: DashboardPeriod = "7d") {
-  return fetchJson<DashboardKpis>(
-    `/dashboard/kpis?period=${encodeURIComponent(period)}`,
-  );
+export type DashboardDateRange = { startDate: string; endDate: string };
+
+export function getDashboardKpis(
+  period: DashboardPeriod = '7d',
+  range?: DashboardDateRange | null,
+) {
+  const p = new URLSearchParams();
+  p.set('period', period);
+  if (range?.startDate && range?.endDate) {
+    p.set('startDate', range.startDate);
+    p.set('endDate', range.endDate);
+  }
+  return fetchJson<DashboardKpis>(`/dashboard/kpis?${p.toString()}`);
 }
 
 export interface DashboardActivityItem {
@@ -96,11 +109,22 @@ export function getDashboardActivity(limit = 50) {
 export interface VolumeChartResponse {
   granularity: string;
   data: { label: string; value: number }[];
+  startDate?: string;
+  endDate?: string;
 }
 
-export function getDashboardVolume(granularity = 'hour') {
+export function getDashboardVolume(
+  granularity = 'hour',
+  range?: DashboardDateRange | null,
+) {
+  const p = new URLSearchParams();
+  p.set('granularity', granularity);
+  if (range?.startDate && range?.endDate) {
+    p.set('startDate', range.startDate);
+    p.set('endDate', range.endDate);
+  }
   return fetchJson<VolumeChartResponse>(
-    `/dashboard/charts/volume?granularity=${encodeURIComponent(granularity)}`,
+    `/dashboard/charts/volume?${p.toString()}`,
   );
 }
 
@@ -155,6 +179,13 @@ export interface EmailListResponse {
   total: number;
   page: number;
   limit: number;
+}
+
+export function enqueueEmailProcess(emailId: string) {
+  return fetchJson<{ queued: boolean; jobId: string }>(
+    `/emails/${encodeURIComponent(emailId)}/process`,
+    { method: 'POST' },
+  );
 }
 
 export function getEmails(filters: EmailListFilters = {}) {
