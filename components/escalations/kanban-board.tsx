@@ -13,7 +13,7 @@ import {
   User,
   GripVertical
 } from "lucide-react"
-import type { EscalationTicket, TicketStatus, TicketPriority } from "@/app/escalations/page"
+import type { EscalationTicket, TicketStatus, TicketPriority } from "@/types/escalation-ui"
 
 interface KanbanBoardProps {
   tickets: EscalationTicket[]

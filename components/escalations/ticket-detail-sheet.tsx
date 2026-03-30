@@ -74,17 +74,23 @@ function TimelineEventIcon({ type }: { type: TimelineEvent["type"] }) {
       return <ArrowRight className="h-4 w-4 text-yellow-400" />
     case "assignment":
       return <UserPlus className="h-4 w-4 text-blue-400" />
+    case "comment":
+      return <MessageSquare className="h-4 w-4 text-muted-foreground" />
     default:
       return <MessageSquare className="h-4 w-4 text-muted-foreground" />
   }
 }
 
 function TimelineEventBadge({ type }: { type: TimelineEvent["type"] }) {
-  const config = {
+  const config: Record<
+    TimelineEvent["type"],
+    { label: string; color: string }
+  > = {
     ai_decision: { label: "Decisão IA", color: "bg-primary/10 text-primary" },
     human_action: { label: "Ação Humana", color: "bg-green-500/10 text-green-400" },
     status_change: { label: "Status", color: "bg-yellow-500/10 text-yellow-400" },
     assignment: { label: "Atribuição", color: "bg-blue-500/10 text-blue-400" },
+    comment: { label: "Comentário", color: "bg-muted text-muted-foreground" },
   }
   const { label, color } = config[type]
   return <Badge variant="outline" className={cn("text-xs", color)}>{label}</Badge>

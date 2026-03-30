@@ -177,7 +177,9 @@ export function EmailTriageTable({
                 </SortableHeader>
               </TableHead>
               <TableHead className="w-[120px]">
-                <SortableHeader field="confidence">Confiança IA</SortableHeader>
+                <SortableHeader field="confidence" onSort={handleSort}>
+                  Confiança IA
+                </SortableHeader>
               </TableHead>
               <TableHead className="w-[180px]">Ação Tomada</TableHead>
               <TableHead className="w-[100px]">

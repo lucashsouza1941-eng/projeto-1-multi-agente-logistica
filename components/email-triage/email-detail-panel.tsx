@@ -24,6 +24,8 @@ import type { Email } from "@/lib/types/email-ui"
 interface EmailDetailPanelProps {
   email: Email
   onClose: () => void
+  onEnqueueTriage?: (id: string) => void
+  isEnqueueing?: boolean
 }
 
 const categoryConfig = {
@@ -206,8 +208,8 @@ export function EmailDetailPanel({
           <Button
             className="w-full gap-2"
             variant="default"
-            disabled={isEnqueueing}
-            onClick={() => onEnqueueTriage(email.id)}
+            disabled={!!isEnqueueing}
+            onClick={() => onEnqueueTriage?.(email.id)}
           >
             <RefreshCw
               className={cn("h-4 w-4", isEnqueueing && "animate-spin")}
