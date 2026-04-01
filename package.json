@@ -13,8 +13,10 @@
     "api:migrate": "pnpm --dir apps/api exec prisma migrate deploy",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
-    "test:coverage": "pnpm --dir apps/api run test:coverage"
+    "lint": "eslint . --max-warnings 0",
+    "test:coverage": "pnpm --dir apps/api run test:coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.0",
@@ -69,6 +71,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.1",
     "@eslint/js": "^9.18.0",
     "@tailwindcss/postcss": "^4.2.0",
     "@types/node": "^22",
