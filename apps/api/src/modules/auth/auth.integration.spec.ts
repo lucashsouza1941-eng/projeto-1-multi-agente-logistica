@@ -1,6 +1,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ThrottlerModule } from '@nestjs/throttler';
 import * as bcrypt from 'bcrypt';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -21,6 +22,7 @@ describe('Auth HTTP (integration)', () => {
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       imports: [
+        ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
         JwtModule.register({
           secret: 'integration-test-secret',
           signOptions: { expiresIn: '1h' },

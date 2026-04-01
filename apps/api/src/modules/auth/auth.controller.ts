@@ -1,4 +1,5 @@
-import { Body, Controller, Inject, Post } from '@nestjs/common';
+import { Body, Controller, Inject, Post, UseGuards } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -7,6 +8,7 @@ import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import { Public } from './public.decorator';
 
 @ApiTags('auth')
+@UseGuards(ThrottlerGuard)
 @Controller('auth')
 export class AuthController {
   constructor(@Inject(AuthService) private readonly authService: AuthService) {}

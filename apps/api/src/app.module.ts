@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
@@ -34,6 +35,13 @@ const isProduction = process.env.NODE_ENV === 'production';
       },
     }),
     ConfigModule.forRoot({ isGlobal: true, load: [appConfig] }),
+    ThrottlerModule.forRoot([
+      {
+        name: 'auth',
+        ttl: 60000,
+        limit: 10,
+      },
+    ]),
     PrismaModule,
     HealthModule,
     QueuesModule,

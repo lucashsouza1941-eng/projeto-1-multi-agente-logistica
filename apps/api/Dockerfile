@@ -33,6 +33,9 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 USER nestjs
 
 ENV NODE_ENV=production
@@ -40,4 +43,4 @@ ENV PORT=3001
 
 EXPOSE 3001
 
-CMD ["node", "dist/main.js"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

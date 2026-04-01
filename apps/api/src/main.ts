@@ -16,6 +16,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new CorrelationIdInterceptor());
   app.useGlobalFilters(new GlobalExceptionFilter());
 
+  // Security headers (X-Content-Type-Options, CSP defaults loosened for API JSON, etc.)
   app.use(helmet());
   app.useGlobalPipes(
     new ValidationPipe({
@@ -26,19 +27,26 @@ async function bootstrap() {
   );
 
   const isProd = process.env.NODE_ENV === 'production';
-  const corsOrigins = isProd
-    ? [process.env.FRONTEND_URL || 'http://localhost:3000']
-    : [
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-        'http://localhost:3001',
-        'http://127.0.0.1:3001',
-        ...(process.env.FRONTEND_URL
-          ? process.env.FRONTEND_URL.split(',').map((o) => o.trim())
-          : []),
-      ];
+
+  const prodAllowlist = new Set(
+    (process.env.FRONTEND_URL || 'http://localhost:3000')
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean),
+  );
+
   app.enableCors({
-    origin: [...new Set(corsOrigins)],
+    origin: (origin, callback) => {
+      if (!isProd) {
+        callback(null, true);
+        return;
+      }
+      if (!origin || prodAllowlist.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`Not allowed by CORS: ${origin}`));
+    },
     credentials: true,
     exposedHeaders: ['X-Correlation-ID'],
   });
