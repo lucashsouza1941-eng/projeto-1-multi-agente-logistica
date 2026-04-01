@@ -49,8 +49,6 @@ import type {
   GeneralSettingsFormValues,
   IntegrationSettingsFormValues,
   NotificationSettingsFormValues,
-  TriageAgentSettings,
-  ReportAgentSettings,
 } from "@/types/settings"
 
 const generalSchema = z.object({

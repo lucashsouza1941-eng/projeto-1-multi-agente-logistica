@@ -15,12 +15,6 @@ import {
 } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
-function publicApiBase() {
-  return (
-    process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://localhost:3001'
-  )
-}
-
 export default function RegisterPage() {
   const router = useRouter()
   const [name, setName] = useState('')
@@ -33,11 +27,20 @@ export default function RegisterPage() {
     e.preventDefault()
     setError(null)
     setPending(true)
-    const res = await fetch(`${publicApiBase()}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password }),
-    })
+    let res: Response
+    try {
+      res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      })
+    } catch {
+      setPending(false)
+      setError(
+        'Não foi possível conectar. Verifique sua rede ou se o servidor Next está respondendo.',
+      )
+      return
+    }
     setPending(false)
     if (!res.ok) {
       const text = await res.text()

@@ -7,7 +7,6 @@ import {
   Mail, 
   FileText, 
   AlertTriangle,
-  CheckCircle2,
   ArrowRight,
   Bot,
   RefreshCw

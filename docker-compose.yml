@@ -77,6 +77,8 @@ services:
       NODE_ENV: production
       HOSTNAME: 0.0.0.0
       PORT: 3000
+      # Rotas /api/* do Next chamam a Nest pela rede interna (evita hostname "api" no navegador).
+      INTERNAL_API_URL: http://api:3001
     ports:
       - "3000:3000"
     depends_on:
