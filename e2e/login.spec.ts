@@ -9,7 +9,7 @@ test('login flow: submit credentials and land on app home', async ({ page }) => 
   await page.getByLabel('E-mail').fill(E2E_EMAIL);
   await page.getByLabel('Senha').fill(E2E_PASSWORD);
   await page.getByRole('button', { name: /entrar/i }).click();
-  await page.waitForURL(/\/($|\?.*)/, { timeout: 20_000 });
+  await page.waitForURL(/\/dashboard/, { timeout: 20_000 });
   await expect(page).not.toHaveURL(/\/login/);
   await expect(page.getByRole('heading', { name: /métricas/i }).first()).toBeVisible({
     timeout: 20_000,

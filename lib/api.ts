@@ -254,6 +254,17 @@ export function getEscalationTickets(status?: string) {
   return fetchJson<EscalationTicket[]>(`/escalation/tickets${q}`);
 }
 
+export function createEscalationTicket(body: {
+  subject: string;
+  description: string;
+  priority: string;
+}) {
+  return fetchJson<EscalationTicket>('/escalation/tickets', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
 export function updateTicketStatus(id: string, status: string) {
   return fetchJson<{ id: string; status: string; updated: boolean }>(
     `/escalation/tickets/${encodeURIComponent(id)}/status`,
@@ -261,5 +272,33 @@ export function updateTicketStatus(id: string, status: string) {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     },
+  );
+}
+
+export interface ApiKeyListItem {
+  id: string;
+  name: string;
+  maskedValue: string;
+  createdAt: string;
+}
+
+export function listApiKeys() {
+  return fetchJson<ApiKeyListItem[]>('/auth/api-keys');
+}
+
+export function createApiKey(name: string) {
+  return fetchJson<{ id: string; apiKey: string; name: string }>(
+    '/auth/api-keys',
+    {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    },
+  );
+}
+
+export function revokeApiKey(id: string) {
+  return fetchJson<{ id: string; revoked: boolean }>(
+    `/api-keys/${encodeURIComponent(id)}`,
+    { method: 'DELETE' },
   );
 }

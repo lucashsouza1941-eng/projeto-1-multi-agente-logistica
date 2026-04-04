@@ -9,15 +9,48 @@ import {
   CorrelationIdInterceptor,
 } from './common';
 
+function validateSecrets(): void {
+  const j = process.env.JWT_SECRET?.trim() ?? '';
+  const r = process.env.REFRESH_TOKEN_SECRET?.trim() ?? '';
+  if (j.length < 32) {
+    throw new Error('JWT_SECRET must be set and at least 32 characters.');
+  }
+  if (r.length < 32) {
+    throw new Error(
+      'REFRESH_TOKEN_SECRET must be set and at least 32 characters.',
+    );
+  }
+}
+
 async function bootstrap() {
+  validateSecrets();
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
 
   app.useGlobalInterceptors(new CorrelationIdInterceptor());
   app.useGlobalFilters(new GlobalExceptionFilter());
 
-  // Security headers (X-Content-Type-Options, CSP defaults loosened for API JSON, etc.)
-  app.use(helmet());
+  // Security headers with explicit CSP suitable for JSON API + Swagger UI.
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          defaultSrc: ["'self'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
+          frameAncestors: ["'none'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+          scriptSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          connectSrc: ["'self'"],
+        },
+      },
+      frameguard: { action: 'deny' },
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+      xContentTypeOptions: true,
+    }),
+  );
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

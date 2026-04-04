@@ -1,13 +1,20 @@
 "use client"
 
+import { useState } from "react"
 import { toast } from "sonner"
+import { useQueryClient } from "@tanstack/react-query"
 import { AppDashboardLayout } from "@/components/layout/app-dashboard-layout"
 import { useEscalationTickets } from "@/hooks/use-escalation-tickets"
 import { useUpdateTicketStatus } from "@/hooks/use-update-ticket-status"
+import { createEscalationTicket } from "@/lib/api"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -24,9 +31,48 @@ const STATUSES = [
   { value: "RESOLVED", label: "Resolvido" },
 ]
 
+const PRIORITIES = [
+  { value: "low", label: "Baixa" },
+  { value: "medium", label: "Média" },
+  { value: "high", label: "Alta" },
+  { value: "critical", label: "Crítica" },
+]
+
 export default function EscalationsPage() {
+  const qc = useQueryClient()
   const { data, isLoading, isError, error } = useEscalationTickets()
   const updateMut = useUpdateTicketStatus()
+  const [subject, setSubject] = useState("")
+  const [description, setDescription] = useState("")
+  const [priority, setPriority] = useState("medium")
+  const [creating, setCreating] = useState(false)
+
+  async function onCreateTicket(e: React.FormEvent) {
+    e.preventDefault()
+    if (!subject.trim() || !description.trim()) {
+      toast.error("Preencha assunto e descrição.")
+      return
+    }
+    setCreating(true)
+    try {
+      await createEscalationTicket({
+        subject: subject.trim(),
+        description: description.trim(),
+        priority,
+      })
+      setSubject("")
+      setDescription("")
+      setPriority("medium")
+      await qc.invalidateQueries({ queryKey: ["escalation", "tickets"] })
+      toast.success("Ticket criado", { description: "Aparece na lista abaixo." })
+    } catch (err) {
+      toast.error("Não foi possível criar o ticket", {
+        description: err instanceof Error ? err.message : "Erro desconhecido",
+      })
+    } finally {
+      setCreating(false)
+    }
+  }
 
   const onChangeStatus = (id: string, status: string) => {
     updateMut.mutate(
@@ -61,6 +107,54 @@ export default function EscalationsPage() {
               Acompanhe tickets criados automaticamente ou manualmente.
             </p>
           </div>
+
+          <Card className="border-border bg-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Novo ticket</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={onCreateTicket} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ticket-subject">Assunto</Label>
+                  <Input
+                    id="ticket-subject"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="Resumo da ocorrência"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ticket-description">Descrição</Label>
+                  <Textarea
+                    id="ticket-description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Detalhes para a equipa"
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ticket-priority">Prioridade</Label>
+                  <Select value={priority} onValueChange={setPriority}>
+                    <SelectTrigger id="ticket-priority" className="w-full sm:w-[220px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PRIORITIES.map((p) => (
+                        <SelectItem key={p.value} value={p.value}>
+                          {p.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="submit" disabled={creating}>
+                  {creating ? "A criar…" : "Criar ticket"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
 
           {isError && (
             <Alert variant="destructive">

@@ -54,6 +54,41 @@ enum EscalationTicketStatus {
   RESOLVED
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model User {
+  id                String              @id @default(cuid())
+  email             String              @unique
+  passwordHash      String
+  name              String
+  role              UserRole            @default(USER)
+  refreshToken      String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  apiKeys           ApiKey[]
+  emails            Email[]
+  reports           Report[]
+  escalationTickets EscalationTicket[]
+  agents            Agent[]
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  keyHash    String
+  keyPrefix  String
+  lookupHash String    @unique
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
 model Email {
   id               String          @id @default(cuid())
   from             String
@@ -67,6 +102,8 @@ model Email {
   status           EmailStatus     @default(PENDING)
   processedAt      DateTime?
   agentDecision    Json?
+  userId           String?
+  user             User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   escalationTicket EscalationTicket?
@@ -81,6 +118,8 @@ model Agent {
   lastRunAt      DateTime?
   totalProcessed Int          @default(0)
   successRate    Float        @default(0)
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   logs           AgentLog[]
@@ -97,6 +136,8 @@ model Report {
   period      String?
   agentId     String?
   agent       Agent?       @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  userId      String?
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 }
@@ -111,6 +152,8 @@ model EscalationTicket {
   source         String?
   emailId        String?                @unique
   email          Email?                 @relation(fields: [emailId], references: [id], onDelete: SetNull)
+  userId         String?
+  user           User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
   aiDecisionLog  Json[]
   timeline       Json[]
   createdAt      DateTime               @default(now())

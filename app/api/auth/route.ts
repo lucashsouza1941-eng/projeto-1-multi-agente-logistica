@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AUTH_COOKIE_NAME } from '@/lib/auth';
+import { AUTH_COOKIE_NAME, REFRESH_COOKIE_NAME } from '@/lib/auth';
 
 function backendUrl() {
   return (
@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
 
   const data = (await res.json()) as {
     access_token?: string;
+    refresh_token?: string;
     user?: unknown;
   };
   const token = data.access_token;
@@ -58,14 +59,28 @@ export async function POST(req: NextRequest) {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: 60 * 15,
   });
+  if (data.refresh_token) {
+    out.cookies.set(REFRESH_COOKIE_NAME, data.refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7,
+    });
+  }
   return out;
 }
 
 export async function DELETE() {
   const out = NextResponse.json({ ok: true });
   out.cookies.set(AUTH_COOKIE_NAME, '', {
+    httpOnly: true,
+    path: '/',
+    maxAge: 0,
+  });
+  out.cookies.set(REFRESH_COOKIE_NAME, '', {
     httpOnly: true,
     path: '/',
     maxAge: 0,

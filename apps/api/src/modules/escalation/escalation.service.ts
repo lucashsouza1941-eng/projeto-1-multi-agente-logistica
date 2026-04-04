@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { EscalationTicketStatus, Prisma } from '@prisma/client';
+import { assertResourceOwned } from '../../common/ownership/assert-resource-owner';
 import { PrismaService } from '../../prisma/prisma.service';
 
 const RULES_SETTING_KEY = 'escalation_rules';
@@ -12,6 +13,7 @@ type TicketRow = {
   assignee: string | null;
   createdAt: Date;
   timeline: Prisma.JsonValue;
+  userId: string | null;
 };
 
 @Injectable()
@@ -31,8 +33,29 @@ export class EscalationService {
     };
   }
 
-  async listTickets(status?: string) {
-    const where: { status?: EscalationTicketStatus } = {};
+  async createTicket(
+    userId: string,
+    dto: { subject: string; description: string; priority: string },
+  ) {
+    const created = await this.prisma.escalationTicket.create({
+      data: {
+        userId,
+        subject: dto.subject.trim(),
+        description: dto.description.trim(),
+        priority: dto.priority.trim(),
+        status: EscalationTicketStatus.NEW,
+        source: 'manual',
+        aiDecisionLog: [],
+        timeline: [{ type: 'created', at: new Date().toISOString() }],
+      },
+    });
+    return this.mapTicket(created);
+  }
+
+  async listTickets(userId: string, status?: string) {
+    const where: { status?: EscalationTicketStatus; userId: string } = {
+      userId,
+    };
     if (status && Object.values(EscalationTicketStatus).includes(status as EscalationTicketStatus)) {
       where.status = status as EscalationTicketStatus;
     }
@@ -43,16 +66,20 @@ export class EscalationService {
     return rows.map((t) => this.mapTicket(t));
   }
 
-  async getTicket(id: string) {
+  async getTicket(userId: string, id: string) {
     const ticket = await this.prisma.escalationTicket.findUnique({ where: { id } });
     if (!ticket) throw new NotFoundException('Ticket not found');
+    assertResourceOwned(ticket.userId, userId);
     return this.mapTicket(ticket);
   }
 
-  async updateStatus(id: string, status: EscalationTicketStatus) {
+  async updateStatus(userId: string, id: string, status: EscalationTicketStatus) {
     if (!Object.values(EscalationTicketStatus).includes(status)) {
       throw new NotFoundException('Invalid status');
     }
+    const existing = await this.prisma.escalationTicket.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Ticket not found');
+    assertResourceOwned(existing.userId, userId);
     try {
       const updated = await this.prisma.escalationTicket.update({
         where: { id },

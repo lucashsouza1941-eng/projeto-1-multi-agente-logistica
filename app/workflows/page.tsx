@@ -18,7 +18,7 @@ export default function WorkflowsPage() {
               Workflows
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Automação entre agentes — em desenvolvimento.
+              Automatize processos com gatilhos e etapas — em breve nesta área.
             </p>
           </div>
           <WorkflowsComingSoon />

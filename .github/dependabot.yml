@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    assignees:
+      - lucashsouza1941-eng
+    open-pull-requests-limit: 10
+    groups:
+      root-patch:
+        patterns:
+          - "*"
+        update-types:
+          - patch
+
+  - package-ecosystem: npm
+    directory: /apps/api
+    schedule:
+      interval: weekly
+    assignees:
+      - lucashsouza1941-eng
+    open-pull-requests-limit: 10
+    groups:
+      api-patch:
+        patterns:
+          - "*"
+        update-types:
+          - patch

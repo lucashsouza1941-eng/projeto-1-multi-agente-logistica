@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import { ThrottlerException } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { getCorrelationId } from '../correlation-id.storage';
 
@@ -41,7 +42,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message: string | string[] = 'Internal server error';
 
-    if (exception instanceof HttpException) {
+    if (exception instanceof ThrottlerException) {
+      status = HttpStatus.TOO_MANY_REQUESTS;
+      message = 'Muitas requisições, tente novamente em instantes';
+    } else if (exception instanceof HttpException) {
       status = exception.getStatus();
       const body = exception.getResponse();
       if (typeof body === 'string') {
@@ -54,7 +58,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         } else if (m != null) message = String(m);
       }
     } else if (exception instanceof Error) {
-      message = exception.message;
+      message = 'Erro interno do servidor';
     }
 
     const payload: GlobalErrorBody = {

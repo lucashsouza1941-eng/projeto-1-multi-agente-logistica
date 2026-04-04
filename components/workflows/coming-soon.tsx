@@ -1,30 +1,38 @@
 "use client"
 
-import { CalendarDays, Workflow } from "lucide-react"
+import { Workflow } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
-/** Reusable “em breve” block for features in development (e.g. Workflows). */
+/** Placeholder de produto quando ainda não existe modelo de dados / API de workflows. */
 export function WorkflowsComingSoon() {
   return (
-    <div className="mx-auto max-w-lg rounded-xl border border-dashed border-border bg-muted/20 px-6 py-12 text-center sm:px-10 sm:py-16">
+    <section
+      className="mx-auto max-w-lg rounded-xl border border-border bg-card px-6 py-10 text-center shadow-sm sm:px-10 sm:py-12"
+      aria-labelledby="workflows-soon-title"
+    >
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
         <Workflow className="h-7 w-7 text-primary" aria-hidden />
       </div>
-      <h2 className="mt-6 text-lg font-semibold text-foreground">Workflows em breve</h2>
+      <h2
+        id="workflows-soon-title"
+        className="mt-6 text-lg font-semibold tracking-tight text-foreground"
+      >
+        Workflows em breve
+      </h2>
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-        Estamos a desenhar orquestrações entre o agente de triagem, relatórios e
-        escalação (filas, regras e gatilhos). Esta área ficará disponível numa
-        release planeada para o{" "}
-        <span className="font-medium text-foreground">Q3 2026</span>.
+        Aqui poderá definir <span className="text-foreground">gatilhos</span>{" "}
+        (por exemplo, quando chega um e-mail ou muda o estado de um ticket) e uma
+        sequência de <span className="text-foreground">etapas</span> que ligam
+        triagem, relatórios e escalação — sem código.
       </p>
-      <div className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-        <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
-        <span>Roadmap interno — sujeito a ajuste</span>
+      <div className="mt-8 flex flex-col items-center gap-2">
+        <Button type="button" disabled className="min-w-[200px]" aria-disabled>
+          Criar workflow
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          Este botão ficará ativo quando a funcionalidade estiver disponível.
+        </p>
       </div>
-      <p className="mt-4 text-xs text-muted-foreground">
-        Até lá: use <strong className="text-foreground">Triagem</strong>,{" "}
-        <strong className="text-foreground">Escalonamentos</strong> e{" "}
-        <strong className="text-foreground">Relatórios</strong> no menu.
-      </p>
-    </div>
+    </section>
   )
 }

@@ -9,6 +9,7 @@ import {
   EscalationTicketStatus,
 } from '@prisma/client';
 import { fakerPT_BR as faker } from '@faker-js/faker';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -97,9 +98,21 @@ async function main() {
   await prisma.escalationTicket.deleteMany();
   await prisma.email.deleteMany();
   await prisma.agent.deleteMany();
+  await prisma.apiKey.deleteMany();
+  await prisma.user.deleteMany();
   await prisma.setting.deleteMany({
     where: { key: { not: { startsWith: PRESERVE_SETTING_PREFIX } } },
   });
+
+  const e2eHash = await bcrypt.hash('E2E_test_password_8', 10);
+  const owner = await prisma.user.create({
+    data: {
+      email: 'e2e@logiagent.local',
+      passwordHash: e2eHash,
+      name: 'E2E User',
+    },
+  });
+  const ownerId = owner.id;
 
   const agentDefs = [
     {
@@ -184,6 +197,7 @@ async function main() {
 
       return prisma.email.create({
         data: {
+          userId: ownerId,
           from: `${fromName} <${fromEmail}>`,
           to: 'operacoes@logiagent-demo.com.br',
           subject,
@@ -225,6 +239,7 @@ async function main() {
 
     await prisma.escalationTicket.create({
       data: {
+        userId: ownerId,
         subject: `Escalonamento: ${email.subject.slice(0, 80)}`,
         description: `Ticket aberto automaticamente a partir da triagem do e-mail ${email.id}.\n${faker.lorem.paragraph()}`,
         priority: ticketPriorities[i % ticketPriorities.length]!,
@@ -278,6 +293,7 @@ async function main() {
 
     await prisma.report.create({
       data: {
+        userId: ownerId,
         title: `${pick(reportTitles)} — ${faker.date.recent({ days: 5 }).toLocaleDateString('pt-BR')}`,
         type: pick(reportTypes),
         period,

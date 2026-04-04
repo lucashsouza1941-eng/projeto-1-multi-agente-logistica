@@ -5,9 +5,16 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    # Teste semanal de restore (backup -> drop DB -> restore -> validar seed)
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
 
 jobs:
+  # Job 1 — lint:
+  # Executa ESLint e type-check na raiz e em apps/api.
   lint:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,9 +31,15 @@ jobs:
       - run: pnpm install
       - run: pnpm lint
       - run: pnpm --dir apps/api run lint
+      - run: pnpm exec tsc --noEmit -p tsconfig.json
+      - run: pnpm --dir apps/api exec tsc --noEmit -p tsconfig.json
 
-  test:
+  # Job 2 — unit (depende de lint):
+  # Roda testes unitários/coverage da API e testes frontend.
+  unit:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    needs: [lint]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -41,27 +54,21 @@ jobs:
             apps/api/pnpm-lock.yaml
       - run: pnpm install
       - run: pnpm test:coverage
-
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - run: pnpm test:frontend
+      - name: Upload cobertura da API
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          version: 9
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-          cache-dependency-path: |
-            pnpm-lock.yaml
-            apps/api/pnpm-lock.yaml
-      - run: pnpm install
-      - run: pnpm build
+          name: api-coverage
+          path: apps/api/coverage/**
+          if-no-files-found: warn
 
-  e2e:
+  # Job 3 — integration (depende de unit):
+  # Sobe Postgres/Redis, aplica migrações e roda testes HTTP/integration da API.
+  integration:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
-    needs: [lint]
+    needs: [unit]
     services:
       postgres:
         image: postgres:16-alpine
@@ -80,11 +87,72 @@ jobs:
         image: redis:7-alpine
         ports:
           - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://logiagent:logiagent@localhost:5432/logiagent
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-jwt-secret-minimum-32-characters-long!!
+      REFRESH_TOKEN_SECRET: ci-refresh-secret-minimum-32-characters-long!
+      ADMIN_INTERNAL_KEY: ci-admin-internal-key-minimum-32-chars!!
+      FRONTEND_URL: http://localhost:3000
+      NODE_ENV: test
+      PORT: 3001
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            apps/api/pnpm-lock.yaml
+      - run: pnpm install
+      - run: pnpm --dir apps/api exec prisma migrate deploy
+      - run: pnpm --dir apps/api exec vitest run src/modules/auth/auth.integration.spec.ts src/modules/email/email.integration.spec.ts src/modules/dashboard/dashboard.integration.spec.ts
+
+  # Job 4 — e2e (depende de integration):
+  # Builda Next.js, sobe API/web em background e executa Playwright.
+  e2e:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    needs: [integration]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: logiagent
+          POSTGRES_PASSWORD: logiagent
+          POSTGRES_DB: logiagent
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U logiagent -d logiagent"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     env:
       CI: true
       DATABASE_URL: postgresql://logiagent:logiagent@localhost:5432/logiagent
       REDIS_URL: redis://localhost:6379
       JWT_SECRET: ci-jwt-secret-minimum-32-characters-long!!
+      REFRESH_TOKEN_SECRET: ci-refresh-secret-minimum-32-characters-long!
+      ADMIN_INTERNAL_KEY: ci-admin-internal-key-minimum-32-chars!!
       FRONTEND_URL: http://localhost:3000
       NODE_ENV: production
       PORT: 3001
@@ -107,9 +175,9 @@ jobs:
       - run: pnpm install
       - run: pnpm --dir apps/api exec prisma migrate deploy
       - run: pnpm --dir apps/api exec prisma db seed
-      - run: pnpm --dir apps/api run build
+      - run: pnpm build
       - name: Start API
-        run: pnpm --dir apps/api run start:prod &
+        run: pnpm --dir apps/api run start:dev &
       - name: Wait for API
         run: |
           for i in $(seq 1 40); do
@@ -117,7 +185,6 @@ jobs:
             sleep 2
           done
           exit 1
-      - run: pnpm build
       - name: Start Next
         env:
           HOSTNAME: 0.0.0.0
@@ -131,4 +198,103 @@ jobs:
           done
           exit 1
       - run: pnpm exec playwright install chromium --with-deps
-      - run: pnpm exec playwright test
+      - run: pnpm test:e2e
+      - name: Upload artefatos do Playwright (falha)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            playwright-report/**
+            test-results/**
+          if-no-files-found: warn
+
+  # Job 5 — build (depende de e2e):
+  # Executa build final do Next.js e da API NestJS.
+  build:
+    runs-on: ubuntu-latest
+    needs: [e2e]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            apps/api/pnpm-lock.yaml
+      - run: pnpm install
+      - run: pnpm build
+      - run: pnpm --dir apps/api run build
+
+  # Job restore-test: semanal (schedule) ou manual — pg_dump/gzip, drop DB, restore, valida seed (e2e@logiagent.local).
+  restore-test:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: logiagent
+          POSTGRES_PASSWORD: logiagent
+          POSTGRES_DB: logiagent
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U logiagent -d logiagent"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://logiagent:logiagent@localhost:5432/logiagent
+      PGPASSWORD: logiagent
+      # Diretório fixo no ubuntu-latest (evita ${{ runner.temp }} no env — alguns linters não reconhecem)
+      BACKUP_DIR: /tmp/backups
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            apps/api/pnpm-lock.yaml
+      - name: Instalar cliente PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: pnpm install
+      - run: pnpm --dir apps/api exec prisma migrate deploy
+      - run: pnpm --dir apps/api exec prisma db seed
+      - name: Executar backup (scripts/backup.sh)
+        env:
+          PGHOST: localhost
+          PGPORT: "5432"
+          POSTGRES_USER: logiagent
+          POSTGRES_PASSWORD: logiagent
+          POSTGRES_DB: logiagent
+        run: |
+          mkdir -p "$BACKUP_DIR"
+          chmod +x scripts/backup.sh
+          ./scripts/backup.sh
+      - name: Dropar e recriar banco
+        run: |
+          psql -h localhost -U logiagent -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'logiagent' AND pid <> pg_backend_pid();
+          DROP DATABASE IF EXISTS logiagent;
+          CREATE DATABASE logiagent;
+          SQL
+      - name: Restaurar backup
+        run: |
+          LATEST="$(ls -t "$BACKUP_DIR"/*.sql.gz | head -1)"
+          echo "Restaurando: $LATEST"
+          gunzip -c "$LATEST" | psql -h localhost -U logiagent -d logiagent -v ON_ERROR_STOP=1
+      - name: Validar dados do seed
+        run: |
+          COUNT="$(psql -h localhost -U logiagent -d logiagent -tAc "SELECT COUNT(*) FROM \"User\" WHERE email = 'e2e@logiagent.local';")"
+          echo "User e2e count: $COUNT"
+          test "$COUNT" = "1"

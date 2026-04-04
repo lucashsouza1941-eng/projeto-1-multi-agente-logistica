@@ -9,6 +9,7 @@ import {
 } from '@nestjs/swagger';
 import { AgentRegistryService } from './agent-registry.service';
 import { AgentsService } from './agents.service';
+import { CurrentUser, type AuthUserPayload } from '../auth/current-user.decorator';
 import { UpdateAgentConfigDto } from './dto/update-agent-config.dto';
 
 @ApiTags('agents')
@@ -23,8 +24,8 @@ export class AgentsController {
   @Get()
   @ApiOperation({ summary: 'Listar agentes' })
   @ApiResponse({ status: 200, description: 'Lista' })
-  list() {
-    return this.agentsService.list();
+  list(@CurrentUser() user: AuthUserPayload) {
+    return this.agentsService.list(user.id);
   }
 
   @Get('registry')
@@ -39,8 +40,12 @@ export class AgentsController {
   @ApiParam({ name: 'id' })
   @ApiQuery({ name: 'limit', required: false })
   @ApiResponse({ status: 200, description: 'Logs' })
-  getLogs(@Param('id') id: string, @Query('limit') limit?: string) {
-    return this.agentsService.getLogs(id, Number(limit) || 100);
+  getLogs(
+    @CurrentUser() user: AuthUserPayload,
+    @Param('id') id: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.agentsService.getLogs(user.id, id, Number(limit) || 100);
   }
 
   @Patch(':id/config')
@@ -48,23 +53,27 @@ export class AgentsController {
   @ApiParam({ name: 'id' })
   @ApiBody({ type: UpdateAgentConfigDto })
   @ApiResponse({ status: 200, description: 'Atualizado' })
-  updateConfig(@Param('id') id: string, @Body() body: UpdateAgentConfigDto) {
-    return this.agentsService.updateConfig(id, body.config);
+  updateConfig(
+    @CurrentUser() user: AuthUserPayload,
+    @Param('id') id: string,
+    @Body() body: UpdateAgentConfigDto,
+  ) {
+    return this.agentsService.updateConfig(user.id, id, body.config);
   }
 
   @Post(':id/restart')
   @ApiOperation({ summary: 'Reiniciar agente' })
   @ApiParam({ name: 'id' })
   @ApiResponse({ status: 201, description: 'Aceito' })
-  restart(@Param('id') id: string) {
-    return this.agentsService.restart(id);
+  restart(@CurrentUser() user: AuthUserPayload, @Param('id') id: string) {
+    return this.agentsService.restart(user.id, id);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Detalhe do agente' })
   @ApiParam({ name: 'id' })
   @ApiResponse({ status: 200, description: 'Agente' })
-  getById(@Param('id') id: string) {
-    return this.agentsService.getById(id);
+  getById(@CurrentUser() user: AuthUserPayload, @Param('id') id: string) {
+    return this.agentsService.getById(user.id, id);
   }
 }

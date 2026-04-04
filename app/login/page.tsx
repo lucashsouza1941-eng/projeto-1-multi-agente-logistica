@@ -2,8 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { login } from '@/lib/auth'
+import { useLogin } from '@/hooks/use-login'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,24 +16,13 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 export default function LoginPage() {
-  const router = useRouter()
+  const { submit, pending, error } = useLogin()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [pending, setPending] = useState(false)
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError(null)
-    setPending(true)
-    const result = await login(email, password)
-    setPending(false)
-    if (!result.ok) {
-      setError(result.message)
-      return
-    }
-    router.push('/')
-    router.refresh()
+    await submit(email, password)
   }
 
   return (

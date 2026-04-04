@@ -13,6 +13,7 @@ import {
   Boxes,
   Workflow,
   History,
+  KeyRound,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -36,7 +37,7 @@ const navigation: Array<{
   href: string
   stat?: SidebarStatKey
 }> = [
-  { name: "Dashboard", icon: LayoutDashboard, href: "/" },
+  { name: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { name: "Agentes", icon: Bot, href: "/agents", stat: "agents" },
   { name: "Triagem de E-mails", icon: Mail, href: "/email-triage", stat: "emails" },
   { name: "Relatórios", icon: FileText, href: "/reports" },
@@ -81,6 +82,7 @@ function SidebarStatBadgeContent({
 
 const settings = [
   { name: "Configurações", icon: Settings, href: "/settings" },
+  { name: "API Keys", icon: KeyRound, href: "/settings/api-keys" },
 ]
 
 function NavContent({ open }: { open: boolean }) {

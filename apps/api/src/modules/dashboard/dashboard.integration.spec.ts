@@ -1,8 +1,10 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../prisma/prisma.service';
+import { IntegrationTestAuthGuard } from '../../test-utils/integration-test-auth.guard';
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
 
@@ -35,6 +37,7 @@ describe('Dashboard HTTP (integration)', () => {
       providers: [
         DashboardService,
         { provide: PrismaService, useValue: prismaMock },
+        { provide: APP_GUARD, useClass: IntegrationTestAuthGuard },
       ],
     }).compile();
 

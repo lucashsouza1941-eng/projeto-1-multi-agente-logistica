@@ -1,6 +1,9 @@
 /** Cookie name shared with `app/api/auth/route.ts` and `app/api/backend/[...path]/route.ts`. */
 export const AUTH_COOKIE_NAME = 'logiagent_token';
 
+/** Refresh token opaco (rotação no backend). */
+export const REFRESH_COOKIE_NAME = 'logiagent_refresh';
+
 /**
  * Login via Next route handler (sets httpOnly cookie). Use from Client Components.
  */

@@ -6,6 +6,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { EscalationService } from './escalation.service';
 
 describe('EscalationService', () => {
+  const uid = 'user_1';
   let prisma: PrismaService;
   let svc: EscalationService;
 
@@ -15,6 +16,7 @@ describe('EscalationService', () => {
         findMany: vi.fn(),
         findUnique: vi.fn(),
         update: vi.fn(),
+        create: vi.fn(),
       },
       setting: {
         findUnique: vi.fn(),
@@ -86,15 +88,16 @@ describe('EscalationService', () => {
         emailId: null,
         aiDecisionLog: [],
         updatedAt: new Date(),
+        userId: uid,
       },
     ]);
 
-    const rows = await svc.listTickets('NEW');
+    const rows = await svc.listTickets(uid, 'NEW');
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe(EscalationTicketStatus.NEW);
     expect(prisma.escalationTicket.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { status: EscalationTicketStatus.NEW },
+        where: { userId: uid, status: EscalationTicketStatus.NEW },
       }),
     );
   });
@@ -102,7 +105,7 @@ describe('EscalationService', () => {
   it('getTicket lança NotFound quando inexistente', async () => {
     vi.mocked(prisma.escalationTicket.findUnique).mockResolvedValue(null);
 
-    await expect(svc.getTicket('missing')).rejects.toBeInstanceOf(
+    await expect(svc.getTicket(uid, 'missing')).rejects.toBeInstanceOf(
       NotFoundException,
     );
   });
@@ -121,7 +124,67 @@ describe('EscalationService', () => {
     expect(engine.evaluate({ priority: 'LOW', category: 'URGENT' }).match).toBe(true);
   });
 
+  it('createTicket persiste ticket NEW com userId', async () => {
+    vi.mocked(prisma.escalationTicket.create).mockImplementation(async (args) => {
+      const d = args.data as {
+        subject: string;
+        description: string;
+        priority: string;
+        userId: string;
+      };
+      return {
+        id: 'new1',
+        subject: d.subject,
+        priority: d.priority,
+        status: EscalationTicketStatus.NEW,
+        assignee: null,
+        createdAt: new Date(),
+        timeline: [],
+        description: d.description,
+        source: 'manual',
+        emailId: null,
+        aiDecisionLog: [],
+        updatedAt: new Date(),
+        userId: d.userId,
+      };
+    });
+
+    const out = await svc.createTicket(uid, {
+      subject: '  Assunto  ',
+      description: '  Corpo  ',
+      priority: 'high',
+    });
+
+    expect(out.subject).toBe('Assunto');
+    expect(prisma.escalationTicket.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: uid,
+          subject: 'Assunto',
+          description: 'Corpo',
+          priority: 'high',
+          status: EscalationTicketStatus.NEW,
+        }),
+      }),
+    );
+  });
+
   it('updateStatus atualiza ticket existente', async () => {
+    vi.mocked(prisma.escalationTicket.findUnique).mockResolvedValue({
+      id: 't1',
+      userId: uid,
+      subject: 'S',
+      description: '',
+      priority: 'high',
+      status: EscalationTicketStatus.NEW,
+      assignee: null,
+      source: null,
+      emailId: null,
+      aiDecisionLog: [],
+      timeline: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
     vi.mocked(prisma.escalationTicket.update).mockResolvedValue({
       id: 't1',
       subject: 'S',
@@ -135,9 +198,10 @@ describe('EscalationService', () => {
       timeline: [],
       createdAt: new Date(),
       updatedAt: new Date(),
+      userId: uid,
     });
 
-    const out = await svc.updateStatus('t1', EscalationTicketStatus.RESOLVED);
+    const out = await svc.updateStatus(uid, 't1', EscalationTicketStatus.RESOLVED);
     expect(out.updated).toBe(true);
     expect(out.status).toBe(EscalationTicketStatus.RESOLVED);
   });

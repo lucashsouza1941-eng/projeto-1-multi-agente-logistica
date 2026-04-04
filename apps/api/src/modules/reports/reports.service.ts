@@ -1,13 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, ReportStatus } from '@prisma/client';
+import { assertResourceOwned } from '../../common/ownership/assert-resource-owner';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(status?: string) {
-    const where: { status?: ReportStatus } = {};
+  async list(userId: string, status?: string) {
+    const where: { status?: ReportStatus; userId: string } = { userId };
     if (status && Object.values(ReportStatus).includes(status as ReportStatus)) {
       where.status = status as ReportStatus;
     }
@@ -34,12 +35,13 @@ export class ReportsService {
     });
   }
 
-  async getById(id: string) {
+  async getById(userId: string, id: string) {
     const report = await this.prisma.report.findUnique({
       where: { id },
       include: { agent: { select: { name: true } } },
     });
     if (!report) throw new NotFoundException('Report not found');
+    assertResourceOwned(report.userId, userId);
     const params = report.parameters as Record<string, unknown> | null;
     const content = report.content as Record<string, unknown> | null;
     const period = params && 'period' in params ? String(params.period) : '—';
@@ -61,12 +63,15 @@ export class ReportsService {
     };
   }
 
-  async create(body: {
-    title: string;
-    type: string;
-    period?: string;
-    parameters?: Record<string, unknown>;
-  }) {
+  async create(
+    userId: string,
+    body: {
+      title: string;
+      type: string;
+      period?: string;
+      parameters?: Record<string, unknown>;
+    },
+  ) {
     let parameters: Prisma.InputJsonValue | undefined;
     if (body.parameters) {
       parameters = { ...body.parameters, period: body.period } as Prisma.InputJsonValue;
@@ -79,6 +84,7 @@ export class ReportsService {
         type: body.type,
         status: 'PENDING',
         parameters,
+        userId,
       },
     });
     return {
@@ -90,9 +96,10 @@ export class ReportsService {
     };
   }
 
-  async regenerate(id: string) {
+  async regenerate(userId: string, id: string) {
     const exists = await this.prisma.report.findUnique({ where: { id } });
     if (!exists) throw new NotFoundException('Report not found');
+    assertResourceOwned(exists.userId, userId);
     await this.prisma.report.update({
       where: { id },
       data: { status: 'GENERATING' },

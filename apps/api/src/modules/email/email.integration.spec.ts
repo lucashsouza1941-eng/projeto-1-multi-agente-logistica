@@ -1,11 +1,15 @@
 import { getQueueToken } from '@nestjs/bullmq';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { EmailCategory, EmailPriority, EmailStatus } from '@prisma/client';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { PROCESS_EMAIL_JOB } from '../../queues/queue-jobs.constants';
 import { PrismaService } from '../../prisma/prisma.service';
+import { IntegrationTestAuthGuard } from '../../test-utils/integration-test-auth.guard';
+import { ThrottlerUserGuard } from '../../common/guards/throttler-user.guard';
 import { EmailController } from './email.controller';
 import { EmailService } from './email.service';
 
@@ -22,11 +26,19 @@ describe('Email HTTP (integration)', () => {
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
+      imports: [
+        ThrottlerModule.forRoot([
+          { name: 'llm', ttl: 60_000, limit: 500 },
+          { name: 'jobs', ttl: 60_000, limit: 500 },
+        ]),
+      ],
       controllers: [EmailController],
       providers: [
         EmailService,
+        ThrottlerUserGuard,
         { provide: PrismaService, useValue: prismaMock },
         { provide: getQueueToken('email-triage'), useValue: mockQueue },
+        { provide: APP_GUARD, useClass: IntegrationTestAuthGuard },
       ],
     }).compile();
 
@@ -80,7 +92,10 @@ describe('Email HTTP (integration)', () => {
   });
 
   it('POST /emails/:id/process enfileira job BullMQ', async () => {
-    prismaMock.email.findUnique.mockResolvedValue({ id: 'email-xyz' });
+    prismaMock.email.findUnique.mockResolvedValue({
+      id: 'email-xyz',
+      userId: 'integration-user',
+    });
 
     const res = await request(app.getHttpServer())
       .post('/emails/email-xyz/process')

@@ -36,8 +36,13 @@ export class ReportGenerationProcessor extends WorkerHost {
       throw new Error('emailId obrigatório');
     }
 
+    const emailPreview = await this.prisma.email.findUnique({
+      where: { id: emailId },
+      select: { userId: true },
+    });
+    const ownerScope = emailPreview?.userId ? { userId: emailPreview.userId } : {};
     const reportAgentRow = await this.prisma.agent.findFirst({
-      where: { type: AgentType.REPORT },
+      where: { type: AgentType.REPORT, ...ownerScope },
     });
     if (!reportAgentRow) {
       throw new Error('Agente REPORT não cadastrado');
@@ -69,6 +74,7 @@ export class ReportGenerationProcessor extends WorkerHost {
           status: ReportStatus.COMPLETED,
           period,
           agentId: reportAgentRow.id,
+          ...(email.userId ? { userId: email.userId } : {}),
           parameters: {
             sourceEmailId: emailId,
             jobId: String(job.id),

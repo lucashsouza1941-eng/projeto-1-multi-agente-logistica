@@ -11,6 +11,7 @@ export default defineConfig({
   workers: CI ? 1 : undefined,
   reporter: CI ? 'github' : 'list',
   use: {
+    /** App Next (`pnpm dev`); sobrescrever com PLAYWRIGHT_BASE_URL se necessário. */
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
     trace: 'on-first-retry',
   },

@@ -75,7 +75,12 @@ export class DashboardService {
     return { since: this.sinceForPeriod(period || '7d'), until: undefined };
   }
 
-  async getKpis(period: string, startDate?: string, endDate?: string) {
+  async getKpis(
+    userId: string,
+    period: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
     const { since, until } = this.resolveKpiRange(
       period || '7d',
       startDate,
@@ -102,28 +107,50 @@ export class DashboardService {
       agentsOnline,
       emailsPending,
     ] = await Promise.all([
-      this.prisma.email.count({ where: { createdAt: createdInPeriod } }),
-      this.prisma.email.count({ where: { createdAt: { gte: today } } }),
-      this.prisma.email.count({ where: { createdAt: { gte: weekStart } } }),
-      this.prisma.email.count({ where: { createdAt: { gte: monthStart } } }),
+      this.prisma.email.count({
+        where: { userId, createdAt: createdInPeriod },
+      }),
+      this.prisma.email.count({
+        where: { userId, createdAt: { gte: today } },
+      }),
+      this.prisma.email.count({
+        where: { userId, createdAt: { gte: weekStart } },
+      }),
+      this.prisma.email.count({
+        where: { userId, createdAt: { gte: monthStart } },
+      }),
       this.prisma.report.count({
-        where: { status: 'COMPLETED', createdAt: createdInPeriod },
+        where: {
+          userId,
+          status: 'COMPLETED',
+          createdAt: createdInPeriod,
+        },
       }),
       this.prisma.email.aggregate({
-        where: { status: 'TRIAGED' },
+        where: { userId, status: 'TRIAGED' },
         _avg: { confidence: true },
       }),
       this.prisma.agentLog.aggregate({
-        where: { success: true, durationMs: { not: null } },
+        where: {
+          success: true,
+          durationMs: { not: null },
+          agent: { userId },
+        },
         _avg: { durationMs: true },
       }),
       this.prisma.escalationTicket.count({
-        where: { status: { in: ['NEW', 'ANALYZING', 'ESCALATED'] } },
+        where: {
+          userId,
+          status: { in: ['NEW', 'ANALYZING', 'ESCALATED'] },
+        },
       }),
       this.prisma.agent.count({
-        where: { status: { in: ['ONLINE', 'PROCESSING'] } },
+        where: {
+          userId,
+          status: { in: ['ONLINE', 'PROCESSING'] },
+        },
       }),
-      this.prisma.email.count({ where: { status: 'PENDING' } }),
+      this.prisma.email.count({ where: { userId, status: 'PENDING' } }),
     ]);
 
     const triageAccuracyPercent =
@@ -150,8 +177,9 @@ export class DashboardService {
     };
   }
 
-  async getActivity(limit: number) {
+  async getActivity(userId: string, limit: number) {
     const logs = await this.prisma.agentLog.findMany({
+      where: { agent: { userId } },
       take: Math.min(limit, 100),
       orderBy: { createdAt: 'desc' },
       include: { agent: { select: { name: true } } },
@@ -166,6 +194,7 @@ export class DashboardService {
   }
 
   async getVolumeChart(
+    userId: string,
     granularity: string,
     startDate?: string,
     endDate?: string,
@@ -177,7 +206,7 @@ export class DashboardService {
         throw new BadRequestException('Intervalo de volume inválido.');
       }
       const emails = await this.prisma.email.findMany({
-        where: { createdAt: { gte: since, lte: until } },
+        where: { userId, createdAt: { gte: since, lte: until } },
         select: { createdAt: true },
       });
       const rangeMs = until.getTime() - since.getTime();
@@ -227,7 +256,7 @@ export class DashboardService {
 
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const emails = await this.prisma.email.findMany({
-      where: { createdAt: { gte: since } },
+      where: { userId, createdAt: { gte: since } },
       select: { createdAt: true },
     });
     const buckets = Array.from({ length: 24 }, (_, i) => ({
@@ -241,9 +270,10 @@ export class DashboardService {
     return { granularity: granularity || 'hour', data: buckets };
   }
 
-  async getCategoryDistribution() {
+  async getCategoryDistribution(userId: string) {
     const grouped = await this.prisma.email.groupBy({
       by: ['category'],
+      where: { userId },
       _count: { category: true },
     });
     const labels: Record<string, string> = {

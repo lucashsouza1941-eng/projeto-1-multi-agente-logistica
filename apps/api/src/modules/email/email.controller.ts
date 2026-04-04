@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Inject, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBody,
   ApiOperation,
@@ -7,9 +17,12 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
+import { CurrentUser, type AuthUserPayload } from '../auth/current-user.decorator';
 import { EmailService } from './email.service';
 import { ReclassifyEmailDto } from './dto/reclassify-email.dto';
 import { BulkEmailActionDto } from './dto/bulk-email-action.dto';
+import { ThrottlerUserGuard } from '../../common/guards/throttler-user.guard';
 
 @ApiTags('emails')
 @Controller('emails')
@@ -24,23 +37,37 @@ export class EmailController {
   @ApiQuery({ name: 'sort', required: false })
   @ApiResponse({ status: 200, description: 'Lista paginada' })
   list(
+    @CurrentUser() user: AuthUserPayload,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('category') category?: string,
     @Query('sort') sort?: string,
   ) {
-    return this.emailService.list(Number(page) || 1, Number(limit) || 20, category, sort || 'createdAt:desc');
+    return this.emailService.list(
+      user.id,
+      Number(page) || 1,
+      Number(limit) || 20,
+      category,
+      sort || 'createdAt:desc',
+    );
   }
 
   @Post('bulk-action')
+  @UseGuards(ThrottlerUserGuard)
+  @Throttle({ jobs: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Ação em lote' })
   @ApiBody({ type: BulkEmailActionDto })
   @ApiResponse({ status: 201, description: 'Processado' })
-  bulkAction(@Body() body: BulkEmailActionDto) {
-    return this.emailService.bulkAction(body.ids, body.action);
+  bulkAction(
+    @CurrentUser() user: AuthUserPayload,
+    @Body() body: BulkEmailActionDto,
+  ) {
+    return this.emailService.bulkAction(user.id, body.ids, body.action);
   }
 
   @Post(':id/process')
+  @UseGuards(ThrottlerUserGuard)
+  @Throttle({ llm: { limit: 5, ttl: 60_000 } })
   @ApiOperation({
     summary: 'Enfileirar processamento de triagem (demo)',
     description:
@@ -49,8 +76,11 @@ export class EmailController {
   @ApiParam({ name: 'id' })
   @ApiResponse({ status: 201, description: 'Job enfileirado' })
   @ApiResponse({ status: 404, description: 'Não encontrado' })
-  enqueueProcess(@Param('id') id: string) {
-    return this.emailService.enqueueProcess(id);
+  enqueueProcess(
+    @CurrentUser() user: AuthUserPayload,
+    @Param('id') id: string,
+  ) {
+    return this.emailService.enqueueProcess(user.id, id);
   }
 
   @Get(':id')
@@ -58,8 +88,8 @@ export class EmailController {
   @ApiParam({ name: 'id' })
   @ApiResponse({ status: 200, description: 'Detalhe' })
   @ApiResponse({ status: 404, description: 'Não encontrado' })
-  getById(@Param('id') id: string) {
-    return this.emailService.getById(id);
+  getById(@CurrentUser() user: AuthUserPayload, @Param('id') id: string) {
+    return this.emailService.getById(user.id, id);
   }
 
   @Patch(':id/reclassify')
@@ -67,7 +97,11 @@ export class EmailController {
   @ApiParam({ name: 'id' })
   @ApiBody({ type: ReclassifyEmailDto })
   @ApiResponse({ status: 200, description: 'Atualizado' })
-  reclassify(@Param('id') id: string, @Body() body: ReclassifyEmailDto) {
-    return this.emailService.reclassify(id, body);
+  reclassify(
+    @CurrentUser() user: AuthUserPayload,
+    @Param('id') id: string,
+    @Body() body: ReclassifyEmailDto,
+  ) {
+    return this.emailService.reclassify(user.id, id, body);
   }
 }

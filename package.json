@@ -15,6 +15,7 @@
     "start": "next start",
     "lint": "eslint . --max-warnings 0",
     "test:coverage": "pnpm --dir apps/api run test:coverage",
+    "test:frontend": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
@@ -83,6 +84,11 @@
     "typescript": "5.7.3",
     "eslint": "^9.18.0",
     "eslint-config-next": "16.1.6",
-    "typescript-eslint": "^8.21.0"
+    "jsdom": "^25.0.1",
+    "@testing-library/react": "^16.2.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript-eslint": "^8.21.0",
+    "vitest": "^3.0.5"
   }
 }

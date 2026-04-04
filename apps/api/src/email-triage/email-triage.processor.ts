@@ -1,7 +1,7 @@
 import { Processor, WorkerHost, InjectQueue } from '@nestjs/bullmq';
 import { Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Job, Queue, QueueEvents } from 'bullmq';
+import { Job, Queue, QueueEvents, UnrecoverableError } from 'bullmq';
 import {
   AgentType,
   EmailPriority,
@@ -9,6 +9,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import {
+  CREATE_ESCALATION_TICKET_JOB,
   GENERATE_REPORT_FROM_EMAIL_JOB,
   PROCESS_EMAIL_JOB,
   ProcessEmailPayload,
@@ -27,6 +28,8 @@ export class EmailTriageProcessor extends WorkerHost implements OnModuleDestroy 
     private readonly config: ConfigService,
     @InjectQueue('report-generation')
     private readonly reportQueue: Queue,
+    @InjectQueue('escalation-processing')
+    private readonly escalationQueue: Queue,
   ) {
     super();
     const url =
@@ -49,17 +52,26 @@ export class EmailTriageProcessor extends WorkerHost implements OnModuleDestroy 
     const emailId = job.data?.emailId;
     if (!emailId) {
       this.logger.error('Job sem emailId');
-      throw new Error('emailId obrigatório');
+      throw new UnrecoverableError('emailId obrigatório');
     }
 
+    const emailRow = await this.prisma.email.findUnique({
+      where: { id: emailId },
+      select: { id: true, userId: true },
+    });
+    if (!emailRow) {
+      throw new Error(`E-mail ${emailId} não encontrado`);
+    }
+
+    const ownerScope = emailRow.userId ? { userId: emailRow.userId } : {};
     const triageAgentRow = await this.prisma.agent.findFirst({
-      where: { type: AgentType.TRIAGE },
+      where: { type: AgentType.TRIAGE, ...ownerScope },
     });
     const reportAgentRow = await this.prisma.agent.findFirst({
-      where: { type: AgentType.REPORT },
+      where: { type: AgentType.REPORT, ...ownerScope },
     });
     const escalationAgentRow = await this.prisma.agent.findFirst({
-      where: { type: AgentType.ESCALATION },
+      where: { type: AgentType.ESCALATION, ...ownerScope },
     });
 
     const logAgentId =
@@ -143,7 +155,11 @@ export class EmailTriageProcessor extends WorkerHost implements OnModuleDestroy 
           type: 'pos-triagem',
           period: '24h',
         },
-        { removeOnComplete: 100, attempts: 2 },
+        {
+          removeOnComplete: 100,
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 2000 },
+        },
       );
 
       await reportJob.waitUntilFinished(this.reportQueueEvents, 120_000);
@@ -152,38 +168,24 @@ export class EmailTriageProcessor extends WorkerHost implements OnModuleDestroy 
       let escalated = false;
 
       if (highPriority) {
-        const existing = await this.prisma.escalationTicket.findUnique({
-          where: { emailId },
-        });
-        if (!existing) {
-          await this.prisma.escalationTicket.create({
-            data: {
-              subject: `Escalonamento automático: ${email.subject.slice(0, 120)}`,
-              description:
-                `Triagem automática identificou prioridade alta.\n\n` +
-                `${triage.reasoning}\nSentimento: ${triage.sentiment}`,
-              priority: 'high',
-              source: 'email-triage-pipeline',
-              emailId,
-              aiDecisionLog: [
-                {
-                  step: 'auto-escalation',
-                  priority: triage.priority,
-                  category: triage.category,
-                  sentiment: triage.sentiment,
-                },
-              ],
-              timeline: [
-                {
-                  type: 'created',
-                  at: new Date().toISOString(),
-                  by: 'EmailTriageProcessor',
-                },
-              ],
-            },
-          });
-          escalated = true;
-        }
+        const escalationJob = await this.escalationQueue.add(
+          CREATE_ESCALATION_TICKET_JOB,
+          {
+            emailId,
+            subject: `Escalonamento automático: ${email.subject.slice(0, 120)}`,
+            description:
+              `Triagem automática identificou prioridade alta.\n\n` +
+              `${triage.reasoning}\nSentimento: ${triage.sentiment}`,
+            priority: 'high',
+            userId: email.userId,
+          },
+          {
+            removeOnComplete: 100,
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 2000 },
+          },
+        );
+        escalated = !!escalationJob.id;
 
         await writeLog({
           agentId: escalationAgentRow?.id ?? logAgentId,

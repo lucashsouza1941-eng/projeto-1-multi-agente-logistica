@@ -1,0 +1,13 @@
+# Serviço de backup: postgres client + dcron, executa scripts/backup.sh a cada 6h.
+FROM postgres:16-alpine
+
+RUN apk add --no-cache dcron
+
+COPY scripts/backup.sh /usr/local/bin/backup.sh
+COPY scripts/backup-entrypoint.sh /usr/local/bin/backup-entrypoint.sh
+RUN chmod +x /usr/local/bin/backup.sh /usr/local/bin/backup-entrypoint.sh
+
+# A cada 6 horas (minuto 0)
+RUN echo "0 */6 * * * /usr/local/bin/backup.sh >> /var/log/backup-cron.log 2>&1" > /etc/crontabs/root
+
+ENTRYPOINT ["/usr/local/bin/backup-entrypoint.sh"]
