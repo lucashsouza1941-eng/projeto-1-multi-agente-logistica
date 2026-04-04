@@ -88,7 +88,7 @@
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^14.6.1",
     "@vitejs/plugin-react": "^4.3.4",
-    "typescript-eslint": "^8.21.0",
+    "typescript-eslint": "^8.58.0",
     "vitest": "^3.0.5"
   }
 }
